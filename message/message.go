@@ -71,8 +71,12 @@ func (container *IKEPayloadContainer) Encode() ([]byte, error) {
 	for index, payload := range *container {
 		payloadData := make([]byte, 4) // IKE payload general header
 
+		if len(payloadData) < 1 {
+			return nil, errors.Errorf("payload data buffer too short")
+		}
+
 		if (index + 1) < len(*container) { // if it has next payload
-			payloadData[0] = uint8((*container)[index+1].Type()) //nolint:gosec
+			payloadData[0] = uint8((*container)[index+1].Type())
 		} else {
 			if payload.Type() == TypeSK {
 				enc, ok := payload.(*Encrypted)
@@ -81,7 +85,7 @@ func (container *IKEPayloadContainer) Encode() ([]byte, error) {
 				}
 				payloadData[0] = enc.NextPayload
 			} else {
-				payloadData[0] = byte(NoNext) //nolint:gosec
+				payloadData[0] = byte(NoNext)
 			}
 		}
 
