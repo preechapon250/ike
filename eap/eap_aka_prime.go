@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -501,7 +502,11 @@ func (attr *EapAkaPrimeAttr) setAttr(attrType EapAkaPrimeAttrType, value []byte)
 		if valLen != 16 {
 			return errors.Errorf("Set %s failed: expect 16 bytes, but got %d bytes", attrType, valLen)
 		}
-		attr.length = uint8((EapAkaAttrTypeLen + EapAkaAttrTypeLen + EapAkaAttrReservedLen + valLen) / 4)
+		calcLen := (EapAkaAttrTypeLen + EapAkaAttrTypeLen + EapAkaAttrReservedLen + valLen) / 4
+		if calcLen < 0 || calcLen > math.MaxUint8 {
+			return fmt.Errorf("eap aka prime attr length overflow")
+		}
+		attr.length = uint8(calcLen)
 		attr.value = make([]byte, valLen)
 		copy(attr.value, value)
 	case AT_AUTS:
@@ -569,7 +574,11 @@ func (attr *EapAkaPrimeAttr) setAttr(attrType EapAkaPrimeAttrType, value []byte)
 		paddingBytes := (4 - (totalLen % 4)) % 4
 
 		attr.reserved = uint16(valBitsLen) // The unit of reserved is bit
-		attr.length = uint8((totalLen + paddingBytes) / 4)
+		calcTotalLen := (totalLen + paddingBytes) / 4
+		if calcTotalLen < 0 || calcTotalLen > math.MaxUint8 {
+			return errors.Errorf("eap aka prime attr length overflow (padding)")
+		}
+		attr.length = uint8(calcTotalLen)
 
 		// Create value slice with padding
 		paddedLen := valBytesLen + paddingBytes
@@ -613,7 +622,11 @@ func (attr *EapAkaPrimeAttr) setAttr(attrType EapAkaPrimeAttrType, value []byte)
 		// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 		attr.reserved = 0
 		valLen := len(value)
-		attr.length = uint8((EapAkaAttrTypeLen + EapAkaAttrTypeLen + EapAkaAttrReservedLen + valLen) / 4)
+		calcLen := (EapAkaAttrTypeLen + EapAkaAttrTypeLen + EapAkaAttrReservedLen + valLen) / 4
+		if calcLen < 0 || calcLen > math.MaxUint8 {
+			return errors.Errorf("eap aka prime attr length overflow")
+		}
+		attr.length = uint8(calcLen)
 		attr.value = make([]byte, valLen)
 		copy(attr.value, value)
 	case AT_NOTIFICATION:

@@ -2,6 +2,7 @@ package message
 
 import (
 	"encoding/binary"
+	"math"
 
 	"github.com/pkg/errors"
 )
@@ -57,8 +58,12 @@ func (securityAssociation *SecurityAssociation) Marshal() ([]byte, error) {
 		proposalData[5] = proposal.ProtocolID
 
 		numberofSPI := len(proposal.SPI)
-		if numberofSPI > 0xFF {
+		if numberofSPI > math.MaxUint8 {
 			return nil, errors.Errorf("Proposal: Too many SPI: %d", numberofSPI)
+		}
+
+		if len(proposalData) < 7 {
+			return nil, errors.Errorf("Proposal: proposal data buffer too short")
 		}
 		proposalData[6] = uint8(numberofSPI)
 		if len(proposal.SPI) > 0 {

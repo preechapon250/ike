@@ -2,6 +2,7 @@ package message
 
 import (
 	"encoding/binary"
+	"math"
 
 	"github.com/pkg/errors"
 )
@@ -22,8 +23,11 @@ func (notification *Notification) Marshal() ([]byte, error) {
 
 	notificationData[0] = notification.ProtocolID
 	numberofSPI := len(notification.SPI)
-	if numberofSPI > 0xFF {
+	if numberofSPI > math.MaxUint8 {
 		return nil, errors.Errorf("Notification: Number of SPI exceeds uint8 limit: %d", numberofSPI)
+	}
+	if len(notificationData) < 2 {
+		return nil, errors.Errorf("Notification: data buffer too short")
 	}
 	notificationData[1] = uint8(numberofSPI)
 	binary.BigEndian.PutUint16(notificationData[2:4], notification.NotifyMessageType)

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"math"
 
 	"github.com/pkg/errors"
 )
@@ -114,7 +115,11 @@ func (eap *EAP) Marshal() ([]byte, error) {
 		eapData = append(eapData, eapTypeData...)
 	}
 
-	binary.BigEndian.PutUint16(eapData[2:4], uint16(len(eapData)))
+	dataLen := len(eapData)
+	if dataLen > math.MaxUint16 {
+		return nil, fmt.Errorf("eap packet length overflow: %d", dataLen)
+	}
+	binary.BigEndian.PutUint16(eapData[2:4], uint16(dataLen))
 
 	return eapData, nil
 }

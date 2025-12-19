@@ -26,17 +26,17 @@ func NewMessage(
 
 func (m *IKEMessage) Encode() ([]byte, error) {
 	if len(m.Payloads) > 0 {
-		m.IKEHeader.NextPayload = uint8(m.Payloads[0].Type())
+		m.NextPayload = uint8(m.Payloads[0].Type())
 	} else {
-		m.IKEHeader.NextPayload = uint8(NoNext)
+		m.NextPayload = uint8(NoNext)
 	}
 
 	var err error
-	m.IKEHeader.PayloadBytes, err = m.Payloads.Encode()
+	m.PayloadBytes, err = m.Payloads.Encode()
 	if err != nil {
 		return nil, errors.Errorf("Encode(): EncodePayload failed: %+v", err)
 	}
-	return m.IKEHeader.Marshal()
+	return m.Marshal()
 }
 
 func (m *IKEMessage) Decode(b []byte) error {
@@ -69,12 +69,21 @@ func (container *IKEPayloadContainer) Encode() ([]byte, error) {
 	ikeMessagePayloadData := make([]byte, 0)
 
 	for index, payload := range *container {
-		payloadData := make([]byte, 4)     // IKE payload general header
+		payloadData := make([]byte, 4) // IKE payload general header
+
+		if len(payloadData) < 1 {
+			return nil, errors.Errorf("payload data buffer too short")
+		}
+
 		if (index + 1) < len(*container) { // if it has next payload
 			payloadData[0] = uint8((*container)[index+1].Type())
 		} else {
 			if payload.Type() == TypeSK {
-				payloadData[0] = payload.(*Encrypted).NextPayload
+				enc, ok := payload.(*Encrypted)
+				if !ok {
+					return nil, errors.Errorf("payload type mismatch: expected Encrypted")
+				}
+				payloadData[0] = enc.NextPayload
 			} else {
 				payloadData[0] = byte(NoNext)
 			}
